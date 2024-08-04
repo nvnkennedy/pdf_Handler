@@ -12,6 +12,7 @@ from pathlib import Path
 import subprocess
 import pikepdf
 import fitz
+from pdf2pptx import convert_pdf2pptx
 
 class pdf_Handler(QtWidgets.QWidget):
     def __init__(self, parent=None):
@@ -28,14 +29,32 @@ class pdf_Handler(QtWidgets.QWidget):
         self.ui.pdf_Merge_Button.clicked.connect(self.mergePdf)
     def convertPdfToDoc(self):
         self.pdffileName = self.openPDFFileNameDialog()
-        self.disableObject(self.ui.pdf_Doc_Button)
-        self.Thread = Thread(target=self.pdf_Doc, daemon=True)
-        self.Thread.start()
+        pdf_document = fitz.open(self.pdffileName)
+        pdf_is_protected = pdf_document.needs_pass
+        pdf_document.close()
+        if pdf_is_protected:
+            self.infoUpdate(self.pdffileName +" password protected. Unlock the pdf first and then Convert")
+            self.placeholder()
+        else:
+            self.infoUpdate(self.pdffileName +" is not password protected. No need to unlock")
+            self.placeholder()
+            self.disableObject(self.ui.pdf_Doc_Button)
+            self.Thread = Thread(target=self.pdf_Doc, daemon=True)
+            self.Thread.start()
     def convertPdfToPowerPoint(self):
         self.pdffileName = self.openPDFFileNameDialog()
-        self.disableObject(self.ui.pdf_Powerpoint_Button)
-        self.Thread = Thread(target=self.pdf_PowerPoint, daemon=True)
-        self.Thread.start()
+        pdf_document = fitz.open(self.pdffileName)
+        pdf_is_protected = pdf_document.needs_pass
+        pdf_document.close()
+        if pdf_is_protected:
+            self.infoUpdate(self.pdffileName +" password protected. Unlock the pdf first and then Convert")
+            self.placeholder()
+        else:
+            self.infoUpdate(self.pdffileName +" is not password protected. No need to unlock")
+            self.placeholder()
+            self.disableObject(self.ui.pdf_Powerpoint_Button)
+            self.Thread = Thread(target=self.pdf_PowerPoint, daemon=True)
+            self.Thread.start()
     def unlockPdf(self):
         self.pdffileName = self.openPDFFileNameDialog()
         pdf_document = fitz.open(self.pdffileName)
@@ -135,8 +154,7 @@ class pdf_Handler(QtWidgets.QWidget):
             # convert pdf to ppt
             self.infoUpdate("Converting PDF to PPT")
             self.placeholder()
-            proc = subprocess.Popen(stCwd+'\\files\\pdf2pptx.exe '+self.pdffileName+' -o '+self.powerpoint_file, stdin = subprocess.PIPE, stdout = subprocess.PIPE)
-            stdout, stderr = proc.communicate()
+            convert_pdf2pptx(self.pdffileName, self.powerpoint_file, resolution=300, start_page=0, page_count=None)
             if os.stat(self.powerpoint_file).st_size > 0:
                 self.validUpdate(self.pdffileName+" is converted to "+
                                  self.powerpoint_file)
